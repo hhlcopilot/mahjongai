@@ -85,7 +85,6 @@
 | --- | --- | --- |
 | **Cloudflare Pages** | https://mahjongai-6nn.pages.dev/ | 主要公開網址（免費、無限流量、HTTPS） |
 | GitHub | https://github.com/hhlcopilot/mahjongai | 原始碼（public） |
-| NAS | https://sltpm.com/mahjongai/ | 自己後備（NAS 熄機／SSH 唔通時會自動跳過，唔會阻住 Cloudflare 部署） |
 
 `./tools/publish.sh "改動說明"` 會一次過做齊：測試 → 部署 NAS → 部署 Cloudflare → push GitHub。
 
