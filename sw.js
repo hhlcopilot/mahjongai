@@ -2,19 +2,19 @@
  * 麻雀聽牌效率計算機 — Service Worker
  * 更新流程：改咗 index.html 嘅 ?v= 之後，記得同步改下面 ASSETS 同 CACHE 版本。
  */
-var VERSION = 'v67';
+var VERSION = 'v68';
 var CACHE = 'mahjongai-' + VERSION;
 
 var ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=73',
-  './js/mahjong.js?v=73',
-  './js/ui-tiles.js?v=73',
-  './js/app.js?v=73',
-  './js/practice.js?v=73',
-  './js/battle.js?v=73',
-  './js/battle-ui.js?v=73',
+  './css/style.css?v=74',
+  './js/mahjong.js?v=74',
+  './js/ui-tiles.js?v=74',
+  './js/app.js?v=74',
+  './js/practice.js?v=74',
+  './js/battle.js?v=74',
+  './js/battle-ui.js?v=74',
   './practice.html',
   './manifest.webmanifest',
   './favicon.svg',
@@ -26,7 +26,7 @@ var ASSETS = [
 
 // 34 張牌面圖
 for (var i = 0; i < 34; i++) {
-  ASSETS.push('./tiles/tile-' + (i < 10 ? '0' : '') + i + '.png?v=73');
+  ASSETS.push('./tiles/tile-' + (i < 10 ? '0' : '') + i + '.png?v=74');
 }
 
 self.addEventListener('install', function (event) {

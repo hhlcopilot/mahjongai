@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var BUILD = 'v73';
+  var BUILD = 'v74';
 
   var M = window.MahjongCore;
   var T = window.TileUI;
@@ -240,11 +240,17 @@
   }
 
   // 由未見嘅牌隨機摸一隻（按剩幾多張加權）
+  // 走番子時，東南西北發白根本冇入牌牆（紅中除外）
+  function tileAllowed(t) {
+    return !opts.noHonors || t < 27 || t === JOKER;
+  }
+
   function drawTile(hand) {
     var ownMeld = M.zeros();
     (state.melds || []).forEach(function (m) { m.tiles.forEach(function (t) { ownMeld[t] += 1; }); });
     var pool = [];
     for (var t = 0; t < 34; t++) {
+      if (!tileAllowed(t)) continue;
       var rem = 4 - (hand[t] || 0) - ownMeld[t] - (state.seen[t] || 0);
       for (var i = 0; i < rem; i++) pool.push(t);
     }
@@ -844,6 +850,15 @@
   // 單頁模式：唔喺載入時就出題（計算器用戶唔需要），第一次切去練習 tab 才開始
   var started = false;
   window.MJPracticeView = {
+    // 開發用（網址加 ?dev=1）：抽 n 次牌，用嚟驗證「走番子」有冇守規則
+    dev: /[?&]dev=1/.test(location.search) ? {
+      sample: function (n) {
+        var out = [];
+        for (var i = 0; i < (n || 200); i++) out.push(drawTile(state.hand.slice()));
+        return out;
+      },
+      allowed: tileAllowed
+    } : null,
     start: function () {
       if (started) return;
       started = true;
