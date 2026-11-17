@@ -8,7 +8,7 @@
   var B = root.MahjongBattle;
   var UI = root.TileUI;
 
-  var BUILD = 'v72';
+  var BUILD = 'v73';
 
   var el = {
     optJoker: doc.getElementById('bOptJoker'),

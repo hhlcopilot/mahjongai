@@ -2,19 +2,19 @@
  * 麻雀聽牌效率計算機 — Service Worker
  * 更新流程：改咗 index.html 嘅 ?v= 之後，記得同步改下面 ASSETS 同 CACHE 版本。
  */
-var VERSION = 'v66';
+var VERSION = 'v67';
 var CACHE = 'mahjongai-' + VERSION;
 
 var ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=72',
-  './js/mahjong.js?v=72',
-  './js/ui-tiles.js?v=72',
-  './js/app.js?v=72',
-  './js/practice.js?v=72',
-  './js/battle.js?v=72',
-  './js/battle-ui.js?v=72',
+  './css/style.css?v=73',
+  './js/mahjong.js?v=73',
+  './js/ui-tiles.js?v=73',
+  './js/app.js?v=73',
+  './js/practice.js?v=73',
+  './js/battle.js?v=73',
+  './js/battle-ui.js?v=73',
   './practice.html',
   './manifest.webmanifest',
   './favicon.svg',
@@ -26,7 +26,7 @@ var ASSETS = [
 
 // 34 張牌面圖
 for (var i = 0; i < 34; i++) {
-  ASSETS.push('./tiles/tile-' + (i < 10 ? '0' : '') + i + '.png?v=72');
+  ASSETS.push('./tiles/tile-' + (i < 10 ? '0' : '') + i + '.png?v=73');
 }
 
 self.addEventListener('install', function (event) {
@@ -77,7 +77,9 @@ self.addEventListener('fetch', function (event) {
     // 舊網址 practice.html（Cloudflare Pages 會轉做 /practice）：直接回 index.html
     // 嘅內容，網址保持唔變（唔跳轉）
     var isPracticeUrl = /\/practice(\.html)?\/?$/.test(url.pathname);
-    var target = isPracticeUrl ? './index.html' : request.url;
+    // 一定要用 './'（根目錄）：Cloudflare Pages 會將 /index.html 308 轉去 /，
+    // 而 service worker 唔可以用「被重定向」嘅 response 回應導覽請求（會 ERR_FAILED）
+    var target = isPracticeUrl ? './' : request.url;
     event.respondWith(
       fetch(target, { cache: 'no-store' }).then(function (response) {
         var copy = response.clone();

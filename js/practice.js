@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var BUILD = 'v72';
+  var BUILD = 'v73';
 
   var M = window.MahjongCore;
   var T = window.TileUI;
