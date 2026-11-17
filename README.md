@@ -79,6 +79,16 @@
 - 舊網址 `practice.html` 由 service worker 直接回 `index.html` 嘅內容，**網址保持 `practice.html` 唔跳轉**
   （冇 SW 時（例如第一次用）先會 fallback 去轉址頁 → `index.html#practice`）
 
+## 已上線位置
+
+| 位置 | 網址 | 用途 |
+| --- | --- | --- |
+| **Cloudflare Pages** | https://mahjongai-6nn.pages.dev/ | 主要公開網址（免費、無限流量、HTTPS） |
+| GitHub | https://github.com/hhlcopilot/mahjongai | 原始碼（public） |
+| NAS | https://sltpm.com/mahjongai/ | 自己後備 |
+
+`./tools/publish.sh "改動說明"` 會一次過做齊：測試 → 部署 NAS → 部署 Cloudflare → push GitHub。
+
 ## 免費發佈到網上（Cloudflare Pages）
 
 呢個站係**純靜態**（約 1.7MB、55 個檔案），任何免費靜態托管都跑得。建議 **Cloudflare Pages**
