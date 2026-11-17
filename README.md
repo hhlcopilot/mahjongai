@@ -79,6 +79,44 @@
 - 舊網址 `practice.html` 由 service worker 直接回 `index.html` 嘅內容，**網址保持 `practice.html` 唔跳轉**
   （冇 SW 時（例如第一次用）先會 fallback 去轉址頁 → `index.html#practice`）
 
+## 免費發佈到網上（Cloudflare Pages）
+
+呢個站係**純靜態**（約 1.7MB、55 個檔案），任何免費靜態托管都跑得。建議 **Cloudflare Pages**
+（無限流量、全球 CDN、免費 HTTPS、免費自訂域名）。
+
+```
+./tools/build.sh      # 產生 dist/（只含網站檔案，已加 _headers 同 .nojekyll）
+```
+
+`dist/` 會排除 `tests/`、`tools/`、`README.md`、`.htaccess`，並寫入 Cloudflare 用嘅
+`_headers`（`index.html` / `sw.js` / `version.json` 設 `no-cache`，`css` / `js` / `tiles` / `icons`
+設長期 cache——因為佢哋帶 `?v=N`，改版時 query 一變就自動攞新檔）。
+
+### 一次性設定
+
+1. GitHub 開一個新 repo（唔好加 README／.gitignore）
+2. `git remote add origin git@github.com:<你嘅帳號>/mahjongai.git && git push -u origin main`
+3. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → 揀個 repo
+4. 設定：
+   - Framework preset：**None**
+   - Build command：`bash tools/build.sh`
+   - Build output directory：`dist`
+5. **Save and Deploy** → 得到 `https://<專案名>.pages.dev`
+
+之後每次 `git push` 就會自動重新部署。
+
+### 想唔用 git 都可以
+
+`./tools/build.sh` 之後，直接將 `dist/` 拖入 Cloudflare Pages 嘅 **Upload assets** 頁面
+（或 `npx wrangler pages deploy dist`）即刻上線。
+
+### 自訂域名
+
+Cloudflare Pages 專案 → **Custom domains** → 加 `mahjong.sltpm.com`（如果 sltpm.com 嘅 DNS 已放喺
+Cloudflare，一個掣就搞定；否則加一條 CNAME 指向 `<專案名>.pages.dev`）。HTTPS 自動簽發。
+
+> ⚠️ PWA / Service Worker 一定要 HTTPS，Cloudflare Pages 預設已經有，唔需要額外設定。
+
 ## 部署（每次改完就做）
 
 > ⚠️ VS Code 嘅 SFTP `uploadOnSave` **只會喺「編輯器儲存」時觸發**。我用指令碼改檔案（python / sed / 測試工具）唔會觸發，
