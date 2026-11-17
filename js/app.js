@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var BUILD = 'v71';
+  var BUILD = 'v72';
 
   var M = window.MahjongCore;
   var MAX_HAND = 14;

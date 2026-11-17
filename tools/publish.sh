@@ -16,7 +16,11 @@ node tests/battle.test.js | tail -1
 node tests/sw.test.js | tail -1
 
 echo "▶ 2/4 部署 NAS（sltpm.com）"
-./tools/deploy.sh
+if ./tools/deploy.sh; then
+  echo "  ✓ NAS 已更新"
+else
+  echo "  ⚠️ NAS 連唔到（可能關咗機／SSH 唔通），跳過——Cloudflare 照樣會部署"
+fi
 
 echo "▶ 3/4 部署 Cloudflare Pages"
 ./tools/build.sh

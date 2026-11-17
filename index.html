@@ -16,7 +16,7 @@
   <script>
     /* 版本自我修復：確保手機唔會長期停留喺舊 cache（見到舊版本徽章就靠呢段） */
     (function () {
-      var V = '71';
+      var V = '72';
       var KEY = 'mj-dirty';
 
       // 只清 cache，唔 unregister SW——保留 SW 先可以令 practice.html 呢類舊網址
@@ -63,7 +63,7 @@
         .catch(function () {});
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=71">
+  <link rel="stylesheet" href="css/style.css?v=72">
 </head>
 <body>
   <div class="app">
@@ -299,7 +299,7 @@
     </main>
 
     <footer class="foot">
-      <p class="foot__ver">版本 <span class="build" id="buildTag">v71</span> · <a href="#" class="foot__update" onclick="mjForceUpdate(event);return false;">強制更新</a></p>
+      <p class="foot__ver">版本 <span class="build" id="buildTag">v72</span> · <a href="#" class="foot__update" onclick="mjForceUpdate(event);return false;">強制更新</a></p>
     </footer>
   </div>
 
@@ -312,12 +312,12 @@
     </button>
   </div>
 
-  <script src="js/mahjong.js?v=71"></script>
-  <script src="js/ui-tiles.js?v=71"></script>
-  <script src="js/app.js?v=71"></script>
-  <script src="js/practice.js?v=71"></script>
-  <script src="js/battle.js?v=71"></script>
-  <script src="js/battle-ui.js?v=71"></script>
+  <script src="js/mahjong.js?v=72"></script>
+  <script src="js/ui-tiles.js?v=72"></script>
+  <script src="js/app.js?v=72"></script>
+  <script src="js/practice.js?v=72"></script>
+  <script src="js/battle.js?v=72"></script>
+  <script src="js/battle-ui.js?v=72"></script>
   <script>
     /* 單頁切換：計算器 ／ 練習 用 tab，唔再跳頁 */
     (function () {
@@ -347,6 +347,8 @@
       function current() {
         var name = (location.hash || '').replace('#', '');
         if (VIEWS[name]) return name;
+        // 舊網址 /practice 或 /practice.html → 預設去練習
+        if (/\/practice(\.html)?\/?$/.test(location.pathname)) return 'practice';
         try {
           var saved = localStorage.getItem(KEY);
           if (VIEWS[saved]) return saved;

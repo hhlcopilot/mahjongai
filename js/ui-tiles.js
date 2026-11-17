@@ -7,7 +7,7 @@
 
   var M = root.MahjongCore;
   var SUIT_CLASS = ['m', 'p', 's', 'z'];
-  var IMG_VERSION = '71';
+  var IMG_VERSION = '72';
 
   function imgPath(tile) {
     return 'tiles/tile-' + (tile < 10 ? '0' : '') + tile + '.png?v=' + IMG_VERSION;
