@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1512">
+    <meta name="color-scheme" content="dark">
+  <title>麻雀聽牌效率計算機 · 紅中百搭</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="聽牌效率">
+  <script>
+    /* 版本自我修復：確保手機唔會長期停留喺舊 cache（見到舊版本徽章就靠呢段） */
+    (function () {
+      var V = '71';
+      var KEY = 'mj-dirty';
+
+      // 只清 cache，唔 unregister SW——保留 SW 先可以令 practice.html 呢類舊網址
+      // 繼續「原址」顯示（新版本 SW 會靠 sw.js?v=N 自己接手）
+      function hardReset() {
+        if (!(window.caches && caches.keys)) return Promise.resolve();
+        return caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        });
+      }
+
+      // 就算 caches / serviceWorker API 冇反應，最多等 2 秒都照重載
+      // 重載用 location.reload()，唔會喺網址加 ?_= / ?v= 之類（URL 保持原樣）
+      function reloadPage() {
+        var fired = false;
+        function go() {
+          if (fired) return;
+          fired = true;
+          location.reload();
+        }
+        setTimeout(go, 2000);
+        hardReset().then(go, go);
+      }
+
+      window.mjForceUpdate = function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        reloadPage();
+      };
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js?v=' + V, { updateViaCache: 'none' })
+          .then(function (reg) { reg.update(); })
+          .catch(function () {});
+      }
+
+      fetch('version.json?_=' + Date.now(), { cache: 'no-store' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!data || !data.v || data.v === V) return;
+          if (sessionStorage.getItem(KEY) === data.v) return;
+          sessionStorage.setItem(KEY, data.v);
+          reloadPage();
+        })
+        .catch(function () {});
+    })();
+  </script>
+  <link rel="stylesheet" href="css/style.css?v=71">
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <h1 id="pageTitle">麻雀聽牌效率計算機</h1>
+      <p id="pageSubtitle">輸入手牌，逐隻試打，睇邊隻聽得最多張、最易食糊。</p>
+      <nav class="page-nav" aria-label="模式">
+        <button type="button" data-view="calc" class="is-on" aria-current="page">計算器</button>
+        <button type="button" data-view="practice">練習</button>
+        <button type="button" data-view="battle">實戰</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="view" id="viewCalc" aria-label="計算器">
+        <div class="badges">
+          <span class="badge">香港麻將 · 13 張</span>
+          <span class="badge badge--accent" id="jokerBadge">紅中百搭</span>
+        </div>
+
+      <section class="panel" aria-labelledby="handTitle">
+        <div class="panel-head">
+          <h2 id="handTitle">我的手牌 <span class="counter" id="handCount">0 / 14</span></h2>
+          <div class="panel-actions">
+            <button type="button" class="ghost" id="undoBtn" disabled>↶ 復原</button>
+            <button type="button" class="ghost" id="clearBtn">清空</button>
+          </div>
+        </div>
+
+        <div class="tray" id="handTray" aria-live="polite">
+          <span class="tray-empty">撳下面嘅牌加入手牌（13 或 14 張）</span>
+        </div>
+        <p class="panel-note hint-full" id="handHint" hidden>手牌已滿 14 張 · 撳上面任何一隻牌就可以拎走</p>
+
+        <div class="picker" id="tilePicker"></div>
+      </section>
+
+      <section class="panel panel--meld" aria-labelledby="meldTitle">
+        <div class="panel-head">
+          <h2 id="meldTitle">副露（碰／槓） <span class="counter counter--dim" id="meldCount">未有</span></h2>
+          <div class="panel-actions">
+            <button type="button" class="ghost" id="meldToggle" aria-expanded="false">展開</button>
+            <button type="button" class="ghost" id="clearMeld">清空</button>
+          </div>
+        </div>
+        <p class="panel-note">香港麻將冇上牌，所以只支援碰同槓。每副副露會令手牌上限少 3 張：14 → 11 → 8 → 5 → 2。</p>
+        <div id="meldBody" hidden>
+          <div class="meld-types" id="meldTypes" role="group" aria-label="副露類型">
+            <button type="button" class="chip is-on" data-kind="pong">碰</button>
+            <button type="button" class="chip" data-kind="kong">槓</button>
+          </div>
+          <div class="picker picker--meld" id="meldPicker"></div>
+          <p class="panel-note meld-hint">碰：撳一隻牌；槓：撳一隻牌。手牌已經有嘅牌會自動撥入副露，唔使自己拎走。</p>
+          <div class="meld-list" id="meldList"></div>
+        </div>
+      </section>
+
+      <section class="panel result" id="resultPanel" aria-labelledby="resultTitle">
+        <div class="panel-head">
+          <h2 id="resultTitle">分析結果</h2>
+          <span class="counter counter--dim" id="resultMeta"></span>
+        </div>
+        <div id="resultBody">
+          <p class="empty-state">仲未夠牌。輸入手牌就會即刻幫你計。</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="optTitle">
+        <div class="panel-head">
+          <h2 id="optTitle">規則</h2>
+        </div>
+        <div class="options">
+          <label class="switch">
+            <input type="checkbox" id="optJoker" checked>
+            <span class="switch-track"></span>
+            <span class="switch-label">紅中百搭<small>中當百搭牌</small></span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="optChiitoi">
+            <span class="switch-track"></span>
+            <span class="switch-label">計七對子<small>部分牌局有計</small></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel panel--seen" aria-labelledby="seenTitle">
+        <div class="panel-head">
+          <h2 id="seenTitle">已見牌 <span class="counter counter--dim">選填</span></h2>
+          <div class="panel-actions">
+            <button type="button" class="ghost" id="seenToggle" aria-expanded="false">展開</button>
+            <button type="button" class="ghost" id="clearSeen">清空</button>
+          </div>
+        </div>
+        <p class="panel-note">牌河、副露、自己碰過嘅牌，撳一下加一張（再撳循環 1→4→0）。填得越齊，剩餘張數越準。</p>
+        <div class="picker picker--seen" id="seenPicker" hidden></div>
+      </section>
+
+        <div class="notes">
+      <p>效率＝向聽數越低越好；同向聽下用<strong>有效牌張數 × √入聽質素</strong>（進張之後聽幾多張）做分數——張數係主角，質素做調整，唔會為咗聽闊少少就犧牲幾張牌。手牌有一對可以<strong>碰</strong>（三家都會打出），所以對子會額外加權；手上<strong>有紅中（百搭）時對子再加權</strong>——碰完好大機會剩一隻中做單吊，而單吊中即係任何牌都食糊。</p>
+      <p>同向聽下，質素分相差 <strong>5% 以內</strong>會當「一樣好」，唔會硬揀一隻。</p>
+      <p>手上有四張相同會提示「可暗槓」：槓有錢收，所以唔會建議你打走第四張；但<strong>槓完向聽會變差就唔會叫槓</strong>（例如 45555 索，槓咗就冇咗 45 呢個搭子）。</p>
+        </div>
+      </section>
+
+      <section class="view" id="viewPractice" aria-label="練習" hidden>
+        <div class="badges">
+          <span class="badge">香港麻將 · 13 張</span>
+          <span class="badge badge--accent" id="pJokerBadge">紅中百搭</span>
+        </div>
+
+          <section class="panel" aria-labelledby="pSetupTitle">
+            <div class="panel-head">
+              <h2 id="pSetupTitle">設定</h2>
+              <span class="counter counter--dim" id="pStats">答對 0 / 0</span>
+            </div>
+
+            <div class="segmented" id="pDifficulty" role="group" aria-label="難度">
+              <button type="button" data-level="easy" class="is-on">初級<small>聽牌～一向聽</small></button>
+              <button type="button" data-level="normal">中級<small>一～兩向聽</small></button>
+              <button type="button" data-level="hard">高級<small>兩～三向聽</small></button>
+            </div>
+
+            <div class="options">
+              <label class="switch">
+                <input type="checkbox" id="pOptMelds">
+                <span class="switch-track"></span>
+                <span class="switch-label">包含副露<small>隨機有碰／槓</small></span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="pOptJoker" checked>
+                <span class="switch-track"></span>
+                <span class="switch-label">紅中百搭<small>中當百搭牌</small></span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="pOptChiitoi">
+                <span class="switch-track"></span>
+                <span class="switch-label">計七對子<small>部分牌局有計</small></span>
+              </label>
+              <label class="switch">
+                <input type="checkbox" id="pOptNoHonors" checked>
+                <span class="switch-track"></span>
+                <span class="switch-label">走番子<small>唔出東南西北發白，只留紅中</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="pQTitle">
+            <div class="panel-head">
+              <h2 id="pQTitle">第 <span id="pRound">1</span> 手 <span class="counter counter--dim" id="pStreak">連續 0</span></h2>
+              <div class="panel-actions">
+                <button type="button" class="ghost" id="pSkipBtn">睇答案</button>
+                <button type="button" class="ghost" id="pNewBtn">換一手</button>
+              </div>
+            </div>
+            <div id="pQuestion" class="question" aria-live="polite"></div>
+            <p class="panel-note" id="pHint">撳你會打嘅嗰隻牌。</p>
+          </section>
+
+          <section class="panel" id="pAnswer" aria-live="polite" hidden></section>
+        <div class="notes">
+      <p>答案以「向聽數 → 有效牌張數 × √入聽質素（進張之後平均聽幾多張，可碰嘅對子加權）」為準；<strong>分數相差 5% 以內當一樣好</strong>，兩隻都算答對。</p>
+      <p>每題都有隨機牌河（同其他玩家嘅碰），剩餘張數會跟住變；兩向聽嘅題目要揀兩次——揀完會隨機摸一隻再揀。</p>
+      <p>手上有四張相同會出「暗槓」按鈕：槓有錢收，槓完補一隻再揀打邊隻。不過如果槓完向聽會變差（例如 45555 索），就唔會出呢個掣——嗰陣應該留住個搭子。</p>
+      <p>同一次練習嘅成績會記喺呢部裝置（localStorage）。</p>
+        </div>
+      </section>
+      <section class="view" id="viewBattle" aria-label="實戰" hidden>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>與 AI 實戰</h2>
+            <div class="panel-actions">
+              <button type="button" class="ghost" id="bNew">新一局</button>
+            </div>
+          </div>
+          <p class="battle-status" id="bStatus">未開始</p>
+          <div id="bSetup">
+          <div class="options">
+            <label class="switch">
+              <input type="checkbox" id="bOptJoker" checked>
+              <span class="switch-track"></span>
+              <span class="switch-label">紅中百搭<small>中當百搭牌</small></span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="bOptChiitoi">
+              <span class="switch-track"></span>
+              <span class="switch-label">計七對子<small>部分牌局有計</small></span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="bOptNoHonors" checked>
+              <span class="switch-track"></span>
+              <span class="switch-label">走番子<small>唔出東南西北發白，只留紅中（預設）</small></span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="bOptTsumoOnly" checked>
+              <span class="switch-track"></span>
+              <span class="switch-label">只許自摸<small>出銃唔可以食糊，摸到先算</small></span>
+            </label>
+          </div>
+          <p class="panel-note" id="bHint">撳「新一局」開始。你係莊家，先摸牌；AI 會用同一個效率引擎計最佳打法。</p>
+          </div>
+        </section>
+
+        <section class="panel" id="bTable" hidden>
+          <div class="battle-meta">
+            <span id="bWall">牌牆 —</span>
+            <span id="bTurn">第 1 巡</span>
+          </div>
+          <div class="battle-opps" id="bOpps"></div>
+        </section>
+
+        <section class="panel" id="bMeRiver">
+          <div class="battle-rivers" id="bRivers"></div>
+        </section>
+
+        <section class="panel" id="bMe" hidden>
+          <div class="panel-head">
+            <h2>你的手牌 <span class="counter" id="bMyCount">14 張</span></h2>
+          </div>
+          <div class="battle-hand" id="bMyHand"></div>
+          <div class="battle-actions" id="bActions" hidden></div>
+        </section>
+
+        <section class="panel" id="bResult" hidden></section>
+
+        <div class="notes">
+          <p>你同 3 個 AI 一檯（你係莊家先手），13 張、冇上牌、紅中百搭。AI 打牌同計碰／槓都用同一個效率引擎。</p>
+          <p>預設<strong>只許自摸</strong>（出銃唔算食糊），可以喺上面熄咗佢就變返正常「出銃都可以食」。你可以碰、明槓、暗槓、<strong>補槓</strong>（碰完手上仲有第四隻就可以升級做槓，補一隻再打）。</p>
+          <p>預設<strong>走番子</strong>（同你平時打嘅一樣：只出萬筒索 + 紅中）。想牌局長啲、想練有番子牌嘅情況，可以喺上面熄咗佢。</p>
+          <p>你摸到嘅牌會擺喺手牌最右邊、用金色框標住，方便睇「摸到咩」。摸完再揀一隻打出。</p>
+          <p>呢一頁唔計番數（純粹練打法），撳「再嚟一局」可以即刻開新局。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p class="foot__ver">版本 <span class="build" id="buildTag">v71</span> · <a href="#" class="foot__update" onclick="mjForceUpdate(event);return false;">強制更新</a></p>
+    </footer>
+  </div>
+
+  <div class="dock" id="dock" hidden>
+    <button type="button" class="dock-btn" id="dockBtn">
+      <span class="dock-label" id="dockLabel">建議打</span>
+      <span class="dock-tile" id="dockTile" hidden></span>
+      <span class="dock-text" id="dockText"></span>
+      <span class="dock-more">詳情 ›</span>
+    </button>
+  </div>
+
+  <script src="js/mahjong.js?v=71"></script>
+  <script src="js/ui-tiles.js?v=71"></script>
+  <script src="js/app.js?v=71"></script>
+  <script src="js/practice.js?v=71"></script>
+  <script src="js/battle.js?v=71"></script>
+  <script src="js/battle-ui.js?v=71"></script>
+  <script>
+    /* 單頁切換：計算器 ／ 練習 用 tab，唔再跳頁 */
+    (function () {
+      var VIEWS = {
+        calc: document.getElementById('viewCalc'),
+        practice: document.getElementById('viewPractice'),
+        battle: document.getElementById('viewBattle')
+      };
+      var HEADS = {
+        calc: ['麻雀聽牌效率計算機', '輸入手牌，逐隻試打，睇邊隻聽得最多張、最易食糊。'],
+        practice: ['隨機牌型練習', '睇牌 → 揀你會打邊隻 → 即刻對答案。'],
+        battle: ['與 AI 實戰', '你 + 3 個 AI 一檯，摸牌、碰、槓、食糊。']
+      };
+      var TITLES = {
+        calc: '麻雀聽牌效率計算機 · 紅中百搭',
+        practice: '隨機牌型練習 · 麻雀聽牌效率',
+        battle: '與 AI 實戰 · 麻雀聽牌效率'
+      };
+      var tabs = document.querySelectorAll('.page-nav button');
+      var titleEl = document.getElementById('pageTitle');
+      var subEl = document.getElementById('pageSubtitle');
+
+      var KEY = 'mj-view';
+
+      // 開頁時決定顯示邊個 tab：#practice / #calc（舊書籤、practice.html 轉址）優先，
+      // 否則用上次睇嘅 tab；兩者都唔會改網址
+      function current() {
+        var name = (location.hash || '').replace('#', '');
+        if (VIEWS[name]) return name;
+        try {
+          var saved = localStorage.getItem(KEY);
+          if (VIEWS[saved]) return saved;
+        } catch (e) { /* 私隱模式可能停用 localStorage */ }
+        return 'calc';
+      }
+
+      function show(name, toTop) {
+        Object.keys(VIEWS).forEach(function (key) {
+          if (VIEWS[key]) VIEWS[key].hidden = key !== name;
+        });
+        Array.prototype.forEach.call(tabs, function (tab) {
+          var on = tab.getAttribute('data-view') === name;
+          tab.classList.toggle('is-on', on);
+          if (on) tab.setAttribute('aria-current', 'page');
+          else tab.removeAttribute('aria-current');
+        });
+        titleEl.textContent = HEADS[name][0];
+        subEl.textContent = HEADS[name][1];
+        document.title = TITLES[name];
+        document.body.setAttribute('data-view', name);
+        try { localStorage.setItem(KEY, name); } catch (e) { /* 忽略 */ }
+        // 練習頁好食 CPU：第一次切過去先出題
+        if (name === 'practice' && window.MJPracticeView) window.MJPracticeView.start();
+        if (name === 'battle' && window.MJBattleView) window.MJBattleView.start();
+        if (toTop) window.scrollTo(0, 0);
+      }
+
+      Array.prototype.forEach.call(tabs, function (tab) {
+        tab.addEventListener('click', function () {
+          show(tab.getAttribute('data-view'), true);
+        });
+      });
+
+      // 只有第一次載入（例如 practice.html 轉址／舊書籤）先理 #practice，#practice，
+      // 之後撳 tab 完全唔會改網址
+      show(current(), false);
+    })();
+  </script>
+</body>
+</html>

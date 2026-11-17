@@ -1,0 +1,9 @@
+# 建置產物
+dist/
+
+# macOS
+.DS_Store
+
+# 臨時檔
+*.tgz
+*.tar.gz
