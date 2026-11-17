@@ -85,9 +85,13 @@
 | --- | --- | --- |
 | **Cloudflare Pages** | https://mahjongai-6nn.pages.dev/ | 主要公開網址（免費、無限流量、HTTPS） |
 | GitHub | https://github.com/hhlcopilot/mahjongai | 原始碼（public） |
-| NAS | https://sltpm.com/mahjongai/ | 自己後備 |
+| NAS | https://sltpm.com/mahjongai/ | 自己後備（NAS 熄機／SSH 唔通時會自動跳過，唔會阻住 Cloudflare 部署） |
 
 `./tools/publish.sh "改動說明"` 會一次過做齊：測試 → 部署 NAS → 部署 Cloudflare → push GitHub。
+
+> Cloudflare Pages 預設開「Pretty URLs」：`/index.html` 會 308 轉去 `/`、`/practice.html` 轉去 `/practice`。
+> 因為 service worker **唔可以用「被重定向」嘅 response 回應導覽請求**（會 `ERR_FAILED`），
+> 所以 `sw.js` 內部一律用 `./`，並同時認得 `/practice` 同 `/practice.html`。
 
 ## 免費發佈到網上（Cloudflare Pages）
 
